@@ -1,2 +1,2 @@
-# equivariant-neural-networks
+# Equivariant Neural Networks
 High energy physics coursework part 1.
