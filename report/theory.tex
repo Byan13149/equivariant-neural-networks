@@ -1,0 +1,367 @@
+\documentclass[10pt,leqno]{amsart}
+\usepackage{graphicx}
+\baselineskip=16pt
+
+\usepackage{indentfirst,csquotes}
+\usepackage{here}
+
+\topmargin= .5cm
+\textheight= 20cm
+\textwidth= 32cc
+\baselineskip=16pt
+
+\evensidemargin= .9cm
+\oddsidemargin= .9cm
+
+\usepackage{amssymb,amsthm,amsmath}
+\usepackage{xcolor,paralist,hyperref,fancyhdr,etoolbox}
+\newtheorem{theorem}{Theorem}[]
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+% \titleformat{\section}[display]{\normalfont\huge\bfseries\centering}{\centering\chaptertitlename\thechapter}{10pt}{\Large}
+% \titlespacing*{\section}{0pt}{0ex}{0ex}
+
+\hypersetup{ colorlinks=true, linkcolor=black, filecolor=black, urlcolor=black }
+\def\proof{\noindent {\it Proof. $\, $}}
+\def\endproof{\hfill $\Box$ \vskip 5 pt }
+\setcounter{section}{-1}
+
+\usepackage{lipsum}
+
+% \begin{document}
+% \title{A3 (HEP) Coursework Theory Report} %%%%%%%%%%%%
+% \author[Initial Surname]{Baiyuan Chen}
+% \date{}
+% % \address{Address}
+% \email{chenbaiyuan75@gmail.com}
+
+% % \begin{abstract}
+% % Abstract 
+% % \end{abstract}
+
+% \maketitle
+
+% \section{Introduction}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+
+{\LARGE \bfseries A3 High Energy Physics Coursework Theory Report\par}
+
+\vspace{1.5cm}
+
+{\large Baiyuan Chen\par}
+\vspace{0.3cm}
+{\large CRSID: bc654\par}
+\vspace{0.3cm}
+{\large bc654@cam.ac.uk\par}
+
+\vspace{1.5cm}
+
+{\large Word Count: XXXX\par}
+
+\vspace{1.5cm}
+
+{\large MPhil in Data Intensive Science\par}
+\vspace{0.3cm}
+{\large University of Cambridge\par}
+% \vspace{0.3cm}
+% {\large \today\par}
+\vspace{1.5cm}
+
+{\small\textit{Below, ``we'' is used instead of ``I'' to follow the convention of scientific writing.}\par}
+
+\vfill
+\end{titlepage}
+
+\setcounter{section}{-1}
+\section{Introduction}
+
+Symmetries are central to modern physics. Lorentz invariance underpins
+special relativity, while local gauge symmetries such as $\mathrm{SU}(2)$
+govern the structure of the electroweak interaction. When neural networks 
+are used to represent physical fields, a generic architecture does not 
+automatically respect these symmetries and can only learn them approximately 
+from data. Following the coursework, this report studies two pre-trained networks,
+NN1 and NN2, that approximate an $\mathrm{SU}(2)$ scalar doublet and a
+gauge--boson field respectively. We first verify their transformation
+properties analytically and numerically (Sections~1--2), then construct
+alternative architectures in which equivariance is enforced exactly by
+restricting the network input to Lorentz invariants (Section~3). Finally,
+we build a classical Lagrangian from these equivariant fields and confirm
+its invariance under both Lorentz and $\mathrm{SU}(2)$ transformations
+(Section~4).
+
+\section{Q1: Equivariance of NN1: SU(2) Fundamental and Lorentz Scalar}
+
+NN1 maps spacetime coordinates $x = (t,x,y,z) \in \mathbb{R}^4$ to four
+real outputs which we package as a complex SU(2) doublet
+$\Phi = (\phi_1 + i\phi_2,\; \phi_3 + i\phi_4)^T \in \mathbb{C}^2$.
+
+\textbf{Lorentz scalar (analytical).}
+A scalar field satisfies $\Phi(\Lambda x) = \Phi(x)$ for all Lorentz
+transformations $\Lambda$. Unlike the SU(2) case this is a non-trivial
+constraint: it requires the network to depend only on Lorentz-invariant
+input combinations such as $x_\mu x^\mu = t^2 - x^2 - y^2 - z^2$.
+
+\textbf{Lorentz scalar (numerical).}
+We test 500 random points under 50 random SO(3) rotations and Lorentz
+boosts, filtering for $|\Phi| > 0.1$ to avoid inflated relative errors.
+The mean relative errors are approximately 5.6\% for rotations and 4.2\%
+for boosts, and the max relative errors are both approximately 6.6\%, confirming
+that NN1 is an approximate Lorentz scalar.
+
+\textbf{SU(2) fundamental (analytical).}
+Under a global transformation $U \in \mathrm{SU}(2)$ the doublet
+transforms as $\Phi \to U\Phi$. Because SU(2) is an internal symmetry it
+acts only on the field components and not on the coordinates, so the doublet
+structure follows from how we package the outputs and places no constraint
+on the network weights. Unitarity ($U^\dagger U = I$) guarantees that
+$\Phi^\dagger\Phi$ is preserved.
+
+\textbf{SU(2) fundamental (numerical).}
+We evaluate NN1 at sample points, apply random $U \in \mathrm{SU}(2)$ to
+the output doublet, and compare $\Phi^\dagger\Phi$ before and after.
+Differences are of order $10^{-9}$ (Table~\ref{tab:q1_su2}), consistent
+with float32 precision.
+
+\begin{table}[h]
+    \centering
+    \caption{SU(2) unitarity check for NN1: $|\Phi^\dagger\Phi - (U\Phi)^\dagger(U\Phi)|$
+    under random $U \in \mathrm{SU}(2)$.}
+    \label{tab:q1_su2}
+    \begin{tabular}{cccc}
+    Point & $|\Phi|^2$ before & $|\Phi|^2$ after $U$ & $|\Delta(\Phi^\dagger\Phi)|$ \\
+    \hline
+    0 & 1.028494 & 1.028494 & 9.01e-10 \\
+    1 & 0.968938 & 0.968938 & 3.45e-08 \\
+    2 & 0.071719 & 0.071719 & 1.66e-09 \\
+    3 & 0.786423 & 0.786423 & 1.66e-09 \\
+    4 & 0.815356 & 0.815356 & 1.73e-08
+    \end{tabular}
+\end{table}
+
+\newpage
+\section{Q2: Equivariance of NN2: SU(2) Adjoint and Spin-1}
+
+NN2 maps spacetime coordinates $x \in \mathbb{R}^4$ to 12 real outputs,
+which we reshape into a $4 \times 3$ matrix $W_\mu^{\,a}(x)$ where
+$\mu = 0,1,2,3$ is the Lorentz index and $a = 1,2,3$ is the SU(2)
+adjoint index.
+
+\textbf{Lorentz spin-1 (analytical).}
+A Lorentz vector field transforms as
+$W_\mu^{\,a}(\Lambda x) = \Lambda_\mu^{\ \nu}\,W_\nu^{\,a}(x)$, i.e.\
+the Lorentz transformation acts on the $\mu$ index while the SU(2) index
+$a$ is left untouched. This is the defining property of a spin-1 field.
+
+\textbf{Lorentz spin-1 (numerical).}
+We test 500 random points under 50 random rotations and boosts, filtering
+for $|W| > 0.1$. The mean relative errors are approximately 23\% for
+rotations and 14\% for boosts, and the max relative errors are approximately 
+28\% and 27\%, respectively. The error grows monotonically with 
+the transformation angle (Figure~\ref{fig:q2_angle}), confirming that the 
+network obeys the symmetry more accurately for small transformations.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.47\textwidth]{../figures/q2_angle.png}
+    \caption{Relative error in $W_\mu^{\,a}(\Lambda x)$ vs transformation angle.}
+    \label{fig:q2_angle}
+\end{figure}
+
+\textbf{SU(2) adjoint (analytical).}
+Under a global $U \in \mathrm{SU}(2)$ the adjoint representation acts via
+a real $3 \times 3$ rotation
+$R^{ab} = \tfrac{1}{2}\,\mathrm{Tr}(\sigma^a\, U\, \sigma^b\, U^\dagger)$,
+where $\sigma^a$ are the Pauli matrices. The field transforms as
+$W_\mu^{\,a} \to R^{ab}\,W_\mu^{\,b}$. As with Q1, SU(2) is internal and
+does not act on the coordinates, so this transformation law follows from
+how we identify the second index with the Lie algebra basis. The matrix $R$
+is automatically a proper rotation ($\det R = 1$, $RR^T = I$), so the
+adjoint invariant $W_\mu^{\,a}\,W^{\mu\,a}$ is preserved.
+
+\textbf{SU(2) adjoint (numerical).}
+We verify that $R \in \mathrm{SO}(3)$ and that
+$W_\mu^{\,a}\,W^{\mu\,a}$ is unchanged under random adjoint rotations.
+Differences are of order $10^{-8}$ (Table~\ref{tab:q2_su2}), confirming
+the invariant is preserved to machine precision.
+
+\begin{table}[H]
+\centering
+\caption{SU(2) adjoint invariance check for NN2: $W_\mu^a W^{\mu a}$ before and after adjoint rotation $R$.}
+\label{tab:q2_su2}
+\begin{tabular}{cccc}
+Point & $W_\mu^{\,a}W^{\mu\,a}$ before & after $R$ & $|\Delta|$ \\
+\hline
+0 & 0.037461 & 0.037461 & 9.03e-10 \\
+1 & 2.396670 & 2.396670 & 4.13e-07 \\
+2 & 0.407864 & 0.407864 & 1.52e-08 \\
+3 & 2.395378 & 2.395378 & 4.02e-08 \\
+4 & 0.848923 & 0.848923 & 4.31e-08
+\end{tabular}
+\end{table}
+
+\newpage
+\section{Q3: Construction and Training of Equivariant Networks}
+
+The key idea is to build the symmetry into the network architecture so
+that it holds exactly, rather than relying on weight tuning to learn it
+approximately from data.
+
+\subsection*{Analytical form}
+\mbox{}\\
+We construct equivariant models of NN1 and NN2, denoted
+EquivariantPhi and EquivariantW, respectively.
+
+\textbf{EquivariantPhi.}
+The only Lorentz-invariant scalar that can be formed from a single
+spacetime point is $s = x_\mu x^\mu = t^2 - x^2 - y^2 - z^2$. We
+therefore define
+\begin{equation}\label{eq:eq_phi}
+\Phi(x) = \mathrm{MLP}(s) \in \mathbb{R}^4.
+\end{equation}
+Since $s$ is invariant under Lorentz transformations,
+$\Phi(\Lambda x) = \mathrm{MLP}(s(\Lambda x)) = \mathrm{MLP}(s(x))
+= \Phi(x)$ by construction. The four real outputs are packaged as an
+SU(2) doublet exactly as in Section~1.
+
+\textbf{EquivariantW.}
+The only Lorentz 4-vector available from a single point is $x_\mu$ itself.
+The most general equivariant ansatz is therefore
+\begin{equation}\label{eq:eq_W}
+W_\mu^{\,a}(x) = f^a(s)\,x_\mu,
+\end{equation}
+where $f^a(s)$ is an MLP mapping $s \to \mathbb{R}^3$ (three adjoint
+components). Under a Lorentz transformation,
+$W_\mu^{\,a}(\Lambda x) = f^a(s)\,(\Lambda x)_\mu
+= \Lambda_\mu^{\ \nu}\,f^a(s)\,x_\nu
+= \Lambda_\mu^{\ \nu}\,W_\nu^{\,a}(x)$,
+which is the correct spin-1 transformation law, holding exactly by
+construction. The SU(2) adjoint structure is inherited from the index $a$
+as in Section~2.
+
+\subsection*{Implementation and results}
+\mbox{}\\
+Both MLPs have three hidden layers of 128 units with ReLU activations
+($\sim$34k parameters each, compared to $\sim$50k for the originals).
+Training data is generated by evaluating NN1 and NN2 on 30{,}000 random
+points drawn uniformly from $[-5, 5]^4$, with 5{,}000 held out for
+validation. We train with Adam (initial learning rate $10^{-3}$) and
+ReduceLROnPlateau scheduling for 150 epochs, selecting the checkpoint with
+the lowest validation MSE loss (Figure~\ref{fig:q3_training}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../figures/q3_training.png}
+    \caption{Training curves for EquivariantPhi and EquivariantW.}
+    \label{fig:q3_training}
+\end{figure}
+
+\textbf{Verification of exact equivariance.}
+We repeat the numerical tests from Sections~1--2 on the new architectures.
+Lorentz equivariance errors are now of order $10^{-7}$
+(Table~\ref{tab:q3_equivariance}), consistent with float32 precision and
+confirming that the symmetry is exact by construction. This represents an
+improvement of five to six orders of magnitude over the original networks.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Lorentz equivariance errors: original vs equivariant architectures.}
+    \label{tab:q3_equivariance}
+    \begin{tabular}{cccc}
+    Model & Transformation & Original & Equivariant \\
+    \hline
+    $\Phi$ & SO(3) rotation & 0.0562 & 1.99e-07 \\
+    $\Phi$ & Lorentz boost & 0.0416 & 2.60e-07 \\
+    $W$ & SO(3) rotation & 0.2302 & 3.45e-07 \\
+    $W$ & Lorentz boost & 0.1415 & 4.80e-07
+    \end{tabular}
+\end{table}
+
+\textbf{Emulation quality.}
+On the validation set, EquivariantPhi achieves a mean relative error of
+5.3\% (median 3.5\%), while EquivariantW gives 30.9\% (median 15.7\%).
+The higher error for $W$ is expected: the ansatz in
+Equation~\eqref{eq:eq_W} is the most general exactly equivariant form,
+but the original NN2 is only approximately equivariant. The
+non-equivariant components of NN2 cannot be captured by an exactly
+equivariant network, so a residual emulation error is unavoidable.
+
+\section{Q4: Invariant Lagrangian Construction}
+
+\subsection*{Analytic form}
+\mbox{}\\
+We construct a classical Lagrangian with kinetic and mass terms for both
+fields:
+%
+\begin{equation}\label{eq:lagrangian}
+\mathcal{L} = \partial_\mu \Phi^\dagger \partial^\mu \Phi
+            - m_\Phi^2\,\Phi^\dagger \Phi
+            - \tfrac{1}{4}\,G_{\mu\nu}^a\,G^{\mu\nu\,a}
+            + \tfrac{1}{2}\,m_W^2\,W_\mu^a\,W^{\mu\,a},
+\end{equation}
+%
+where $G_{\mu\nu}^a = \partial_\mu W_\nu^a - \partial_\nu W_\mu^a$ is the
+Abelian field-strength tensor (we omit the non-Abelian
+$\epsilon^{abc}W_\mu^b W_\nu^c$ term for simplicity).
+
+\textbf{Lorentz invariance.}
+Every Lorentz index is contracted with the Minkowski metric
+$\eta^{\mu\nu}$. Since $\Phi$ is a scalar and $W_\mu^a$ is a vector, each
+term is manifestly a Lorentz scalar.
+
+\textbf{SU(2) invariance.}
+$\Phi^\dagger\Phi$ is invariant under $\Phi \to U\Phi$ by unitarity. The
+adjoint index $a$ is contracted with $\delta^{ab}$, which is invariant
+under $W^a \to R^{ab}W^b$ by orthogonality of the adjoint rotation $R$.
+
+\subsection*{Implementation and results}
+\mbox{}\\
+The equivariant networks from Section~3 output $W^{\mu}_a$ with an upper
+Lorentz index. We lower with the metric,
+$W_\nu^a = \eta_{\nu\mu}\,W^{\mu}_a$, before forming $G_{\mu\nu}^a$.
+All spacetime derivatives are computed exactly via PyTorch autograd. To
+ensure well-defined higher-order derivatives we retrain the equivariant
+networks from Section~3 with SiLU activations in place of ReLU,
+achieving comparable emulation quality
+(Figure~\ref{fig:q4_training}). We set $m_\Phi = m_W = 1$.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../figures/q4_training.png}
+    \caption{Training curves for SiLU equivariant networks.}
+    \label{fig:q4_training}
+\end{figure}
+
+\textbf{Lorentz invariance (numerical).}
+We evaluate $\mathcal{L}(x)$ and $\mathcal{L}(\Lambda x)$ at 15 random
+points under random SO(3) rotations and Lorentz boosts. The mean relative
+errors are $1.7 \times 10^{-7}$ and $2.7 \times 10^{-7}$ respectively, 
+confirming that the Lagrangian is a Lorentz scalar to machine precision.
+
+\textbf{SU(2) invariance (numerical).}
+Since SU(2) is a global internal symmetry, we verify that the individual
+invariant combinations entering $\mathcal{L}$ are preserved under
+transformation. Under random $U \in \mathrm{SU}(2)$, the maximum
+deviations in $\Phi^\dagger\Phi$ and $W_\mu^a\,W^{\mu\,a}$ are
+$4.1 \times 10^{-8}$ and $2.5 \times 10^{-7}$ respectively, consistent 
+with float32 precision. This is expected since the Lagrangian depends on 
+the fields only through $\Phi^\dagger\Phi$ (unitary invariant) and 
+$\delta_{ab}$ contractions (adjoint invariant), so SU(2) invariance holds 
+as a mathematical identity.
+
+% \begin{thebibliography}{99}
+
+% \bibitem{1} ***
+
+% \end{thebibliography}
+\end{document} 
