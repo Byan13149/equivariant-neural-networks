@@ -1,22 +1,5 @@
 # A3 High Energy Physics Coursework
 
-**Author:** Baiyuan Chen (bc654)
-
-## Data
-
-Download `data.root` and `mc.root` from [CERN](https://cern.ch/mkenzie/mphil/assignment/2526/) into `../../data/` relative to this directory:
-
-```
-data/
-├── data.root
-└── mc.root
-bc654/
-├── experiment_solution.ipynb
-└── ...
-```
-
-The experiment notebook expects to find them at `../../data/data.root` and `../../data/mc.root`.
-
 ## Setup
 
 ```bash
