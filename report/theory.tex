@@ -66,7 +66,7 @@
 
 \vspace{1.5cm}
 
-{\large Word Count: XXXX\par}
+{\large Word Count: $\sim$1605\par}
 
 \vspace{1.5cm}
 
@@ -102,36 +102,65 @@ its invariance under both Lorentz and $\mathrm{SU}(2)$ transformations
 
 \section{Q1: Equivariance of NN1: SU(2) Fundamental and Lorentz Scalar}
 
-NN1 maps spacetime coordinates $x = (t,x,y,z) \in \mathbb{R}^4$ to four
-real outputs which we package as a complex SU(2) doublet
+NN1 is a generic fully connected network ($4 \to 128 \to 128 \to 128 \to 4$
+with ReLU activations) that maps spacetime coordinates
+$x = (t,x,y,z) \in \mathbb{R}^4$ to four real outputs, which we package
+as a complex SU(2) doublet
 $\Phi = (\phi_1 + i\phi_2,\; \phi_3 + i\phi_4)^T \in \mathbb{C}^2$.
+Four real outputs map naturally to two complex components, matching the
+dimensionality of the fundamental representation of SU(2).
 
 \textbf{Lorentz scalar (analytical).}
 A scalar field satisfies $\Phi(\Lambda x) = \Phi(x)$ for all Lorentz
-transformations $\Lambda$. Unlike the SU(2) case this is a non-trivial
-constraint: it requires the network to depend only on Lorentz-invariant
-input combinations such as $x_\mu x^\mu = t^2 - x^2 - y^2 - z^2$.
+transformations $\Lambda \in \mathrm{SO}(3,1)$. This is a non-trivial
+constraint: a generic MLP takes all four components of $x$ as independent
+inputs and could learn functions that are \emph{not} Lorentz-invariant.
+For the scalar condition to hold, the network must effectively depend only
+on Lorentz-invariant input combinations, the simplest being
+$x_\mu x^\mu = t^2 - x^2 - y^2 - z^2$. Since NN1 has no architectural
+mechanism enforcing this (unlike the equivariant network in Section~3),
+the scalar property can only be approximate, arising from how the weights
+were tuned.
 
 \textbf{Lorentz scalar (numerical).}
-We test 500 random points under 50 random SO(3) rotations and Lorentz
-boosts, filtering for $|\Phi| > 0.1$ to avoid inflated relative errors.
-The mean relative errors are approximately 5.6\% for rotations and 4.2\%
-for boosts, and the max relative errors are both approximately 6.6\%, confirming
-that NN1 is an approximate Lorentz scalar.
+We evaluate NN1 at 500 random points in $[-3, 3]^4$ and compute the
+relative error
+$\varepsilon = \|\Phi(\Lambda x) - \Phi(x)\| / \|\Phi(x)\|$ under 50
+random transformations. Rotations are generated from a random axis
+(normalised Gaussian) and uniform angle in $[0, 2\pi]$; boosts use a
+random rapidity in $[0, 0.8]$ along a random direction. We restrict to
+transformed points within the training domain $|x_i| \leq 5$ and filter
+for $\|\Phi\| > 0.1$ to avoid inflated relative errors from near-zero
+outputs. The mean relative errors are approximately 5.6\% for rotations
+and 4.2\% for boosts, with maximum errors of approximately 6.6\% in both
+cases, confirming that NN1 is an approximate Lorentz scalar.
 
 \textbf{SU(2) fundamental (analytical).}
-Under a global transformation $U \in \mathrm{SU}(2)$ the doublet
-transforms as $\Phi \to U\Phi$. Because SU(2) is an internal symmetry it
-acts only on the field components and not on the coordinates, so the doublet
-structure follows from how we package the outputs and places no constraint
-on the network weights. Unitarity ($U^\dagger U = I$) guarantees that
-$\Phi^\dagger\Phi$ is preserved.
+The fundamental (spin-$\tfrac{1}{2}$) representation of SU(2) consists of
+$2 \times 2$ unitary matrices with unit determinant acting on vectors in
+$\mathbb{C}^2$. Under a global transformation $U \in \mathrm{SU}(2)$ the
+doublet transforms as $\Phi \to U\Phi$, which is the defining
+property of the fundamental representation. Crucially, SU(2) is an internal
+symmetry: it acts only on the field components (the output space) and not
+on the spacetime coordinates (the input), so the doublet structure is a
+consequence of how we package the four real outputs into $\mathbb{C}^2$
+and places no constraint on the network weights. Unitarity
+($U^\dagger U = I$) guarantees that $\Phi^\dagger\Phi$ is preserved, and
+the generators $\tau_a = \sigma_a / 2$ (with $\sigma_a$ the Pauli
+matrices) satisfy the SU(2) algebra
+$[\tau_a, \tau_b] = i\epsilon_{abc}\,\tau_c$.
 
 \textbf{SU(2) fundamental (numerical).}
-We evaluate NN1 at sample points, apply random $U \in \mathrm{SU}(2)$ to
-the output doublet, and compare $\Phi^\dagger\Phi$ before and after.
-Differences are of order $10^{-9}$ (Table~\ref{tab:q1_su2}), consistent
-with float32 precision.
+Since SU(2) is internal, the transformation $\Phi \to U\Phi$ acts on the
+output and does not involve the network, so any equivariance test reduces
+to a check of the representation theory. We verify consistency by
+evaluating NN1 at sample points, applying random $U \in \mathrm{SU}(2)$,
+and confirming $\Phi^\dagger\Phi = (U\Phi)^\dagger(U\Phi)$. Differences
+are of order $10^{-9}$ (Table~\ref{tab:q1_su2}), consistent with float32
+precision. This test confirms unitarity of $U$ rather than a learned
+property of the network, which is expected: for an internal symmetry the
+equivariance is \emph{exact by construction} once the output is packaged
+as a doublet.
 
 \begin{table}[h]
     \centering
@@ -149,51 +178,70 @@ with float32 precision.
     \end{tabular}
 \end{table}
 
-\newpage
 \section{Q2: Equivariance of NN2: SU(2) Adjoint and Spin-1}
 
-NN2 maps spacetime coordinates $x \in \mathbb{R}^4$ to 12 real outputs,
+NN2 is a generic MLP with the same architecture as NN1 but with 12 outputs,
 which we reshape into a $4 \times 3$ matrix $W_\mu^{\,a}(x)$ where
 $\mu = 0,1,2,3$ is the Lorentz index and $a = 1,2,3$ is the SU(2)
-adjoint index.
+adjoint index (matching $\dim\,\mathrm{SU}(2) = 3$).
 
 \textbf{Lorentz spin-1 (analytical).}
-A Lorentz vector field transforms as
-$W_\mu^{\,a}(\Lambda x) = \Lambda_\mu^{\ \nu}\,W_\nu^{\,a}(x)$, i.e.\
-the Lorentz transformation acts on the $\mu$ index while the SU(2) index
-$a$ is left untouched. This is the defining property of a spin-1 field.
+A Lorentz vector (spin-1) field transforms as
+$W_\mu^{\,a}(\Lambda x) = \Lambda_\mu^{\ \nu}\,W_\nu^{\,a}(x)$:
+the $4 \times 4$ Lorentz matrix acts on the spacetime index $\mu$ while
+the internal index $a$ is left untouched. As with NN1, the generic MLP
+architecture has no mechanism enforcing this equivariance, so it can only
+hold approximately.
 
 \textbf{Lorentz spin-1 (numerical).}
-We test 500 random points under 50 random rotations and boosts, filtering
-for $|W| > 0.1$. The mean relative errors are approximately 23\% for
-rotations and 14\% for boosts, and the max relative errors are approximately 
-28\% and 27\%, respectively. The error grows monotonically with 
-the transformation angle (Figure~\ref{fig:q2_angle}), confirming that the 
-network obeys the symmetry more accurately for small transformations.
+Using the same testing protocol as Section~1 (500 points, 50
+transformations, $\|W\| > 0.1$ filter), we compute
+$\varepsilon = \|W_\mu^a(\Lambda x) - \Lambda_\mu^{\ \nu} W_\nu^a(x)\|
+/ \|W(x)\|$. The mean relative errors are approximately 23\% for
+rotations and 14\% for boosts, with maximum errors of approximately
+28\% and 27\% respectively, which are substantially larger than NN1 and indicates
+a coarser approximation. 
+The error grows monotonically with the
+transformation angle (Figure~\ref{fig:q2_angle}). This is expected for
+a network trained to approximate equivariance: any smooth map can be
+expanded as $W_\mu^a(\Lambda x) = \Lambda_\mu^{\ \nu} W_\nu^a(x) +
+\delta W_\mu^a(x, \Lambda)$, where the violation $\delta W$ vanishes at
+$\Lambda = I$ and grows with the size of the transformation. For a
+rotation by angle $\theta$, $\Lambda = I + \theta\,K + \mathcal{O}(\theta^2)$
+where $K$ is the generator, so the leading violation is
+$\mathcal{O}(\theta)$, consistent with the approximately linear growth
+seen at small angles in Figure~\ref{fig:q2_angle}.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.47\textwidth]{../figures/q2_angle.png}
+    \includegraphics[width=0.4\textwidth]{../figures/thy_q2_angle.png}
     \caption{Relative error in $W_\mu^{\,a}(\Lambda x)$ vs transformation angle.}
     \label{fig:q2_angle}
 \end{figure}
 
 \textbf{SU(2) adjoint (analytical).}
-Under a global $U \in \mathrm{SU}(2)$ the adjoint representation acts via
-a real $3 \times 3$ rotation
+The adjoint representation of SU(2) acts on the three-dimensional space
+of the Lie algebra (spanned by the Pauli matrices $\sigma^a$). Under a
+global $U \in \mathrm{SU}(2)$ the representation matrix is a real
+$3 \times 3$ rotation
 $R^{ab} = \tfrac{1}{2}\,\mathrm{Tr}(\sigma^a\, U\, \sigma^b\, U^\dagger)$,
-where $\sigma^a$ are the Pauli matrices. The field transforms as
-$W_\mu^{\,a} \to R^{ab}\,W_\mu^{\,b}$. As with Q1, SU(2) is internal and
-does not act on the coordinates, so this transformation law follows from
-how we identify the second index with the Lie algebra basis. The matrix $R$
-is automatically a proper rotation ($\det R = 1$, $RR^T = I$), so the
-adjoint invariant $W_\mu^{\,a}\,W^{\mu\,a}$ is preserved.
+and the field transforms as $W_\mu^{\,a} \to R^{ab}\,W_\mu^{\,b}$. As
+with Q1, SU(2) is internal and does not act on the coordinates, so this
+transformation law follows from identifying the index $a$ with the Lie
+algebra basis. The matrix $R$ is automatically a proper rotation
+($\det R = 1$, $RR^T = I$), so the adjoint invariant
+$W_\mu^{\,a}\,W^{\mu\,a}$ is preserved.
 
 \textbf{SU(2) adjoint (numerical).}
-We verify that $R \in \mathrm{SO}(3)$ and that
-$W_\mu^{\,a}\,W^{\mu\,a}$ is unchanged under random adjoint rotations.
-Differences are of order $10^{-8}$ (Table~\ref{tab:q2_su2}), confirming
-the invariant is preserved to machine precision.
+As in Section~1, the SU(2) transformation is internal and acts only on
+the output, so the test reduces to verifying the representation theory.
+We confirm that the computed $R$ matrices are proper rotations
+($\det R = 1$, $\|RR^T - I\| \sim 10^{-15}$) and that the adjoint
+invariant $W_\mu^{\,a}\,W^{\mu\,a}$ is unchanged under random
+$R \in \mathrm{SO}(3)$. Differences are of order $10^{-8}$
+(Table~\ref{tab:q2_su2}), consistent with machine precision and
+confirming that the adjoint structure is exact by construction once the
+index $a$ is identified with the Lie algebra basis.
 
 \begin{table}[H]
 \centering
@@ -210,12 +258,10 @@ Point & $W_\mu^{\,a}W^{\mu\,a}$ before & after $R$ & $|\Delta|$ \\
 \end{tabular}
 \end{table}
 
-\newpage
 \section{Q3: Construction and Training of Equivariant Networks}
 
-The key idea is to build the symmetry into the network architecture so
-that it holds exactly, rather than relying on weight tuning to learn it
-approximately from data.
+Rather than relying on weight tuning to learn symmetries approximately,
+we build them into the architecture so they hold exactly.
 
 \subsection*{Analytical form}
 \mbox{}\\
@@ -251,27 +297,24 @@ as in Section~2.
 
 \subsection*{Implementation and results}
 \mbox{}\\
-Both MLPs have three hidden layers of 128 units with ReLU activations
-($\sim$34k parameters each, compared to $\sim$50k for the originals).
-Training data is generated by evaluating NN1 and NN2 on 30{,}000 random
-points drawn uniformly from $[-5, 5]^4$, with 5{,}000 held out for
-validation. We train with Adam (initial learning rate $10^{-3}$) and
-ReduceLROnPlateau scheduling for 150 epochs, selecting the checkpoint with
-the lowest validation MSE loss (Figure~\ref{fig:q3_training}).
+Both MLPs use three hidden layers of 128 units with ReLU activations. We generate
+training data by evaluating NN1/NN2 on 30{,}000 random points in
+$[-5, 5]^4$ (5{,}000 for validation) and train with Adam ($\mathrm{lr}
+= 10^{-3}$) and ReduceLROnPlateau for 150 epochs
+(Figure~\ref{fig:q3_training}).
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{../figures/q3_training.png}
+    \includegraphics[width=0.8\textwidth]{../figures/thy_q3_training.png}
     \caption{Training curves for EquivariantPhi and EquivariantW.}
     \label{fig:q3_training}
 \end{figure}
 
 \textbf{Verification of exact equivariance.}
-We repeat the numerical tests from Sections~1--2 on the new architectures.
-Lorentz equivariance errors are now of order $10^{-7}$
-(Table~\ref{tab:q3_equivariance}), consistent with float32 precision and
-confirming that the symmetry is exact by construction. This represents an
-improvement of five to six orders of magnitude over the original networks.
+Repeating the tests from Sections~1--2, the Lorentz equivariance errors
+are now of order $10^{-7}$ (Table~\ref{tab:q3_equivariance}), consistent
+with float32 precision and representing an improvement of five to six
+orders of magnitude over the original networks.
 
 \begin{table}[htbp]
     \centering
@@ -290,11 +333,10 @@ improvement of five to six orders of magnitude over the original networks.
 \textbf{Emulation quality.}
 On the validation set, EquivariantPhi achieves a mean relative error of
 5.3\% (median 3.5\%), while EquivariantW gives 30.9\% (median 15.7\%).
-The higher error for $W$ is expected: the ansatz in
-Equation~\eqref{eq:eq_W} is the most general exactly equivariant form,
-but the original NN2 is only approximately equivariant. The
-non-equivariant components of NN2 cannot be captured by an exactly
-equivariant network, so a residual emulation error is unavoidable.
+The higher error for $W$ is expected: Equation~\eqref{eq:eq_W} is the
+most general exactly equivariant form, but NN2 is only approximately
+equivariant, so its non-equivariant components cannot be captured and a
+residual error is unavoidable.
 
 \section{Q4: Invariant Lagrangian Construction}
 
@@ -311,33 +353,35 @@ fields:
 \end{equation}
 %
 where $G_{\mu\nu}^a = \partial_\mu W_\nu^a - \partial_\nu W_\mu^a$ is the
-Abelian field-strength tensor (we omit the non-Abelian
-$\epsilon^{abc}W_\mu^b W_\nu^c$ term for simplicity).
+Abelian field-strength tensor. We omit the non-Abelian
+$g\epsilon^{abc}W_\mu^b W_\nu^c$ self-interaction since we work with a
+global (not gauged) SU(2) symmetry and the Abelian kinetic term already
+demonstrates the required invariance structure.
 
 \textbf{Lorentz invariance.}
-Every Lorentz index is contracted with the Minkowski metric
-$\eta^{\mu\nu}$. Since $\Phi$ is a scalar and $W_\mu^a$ is a vector, each
-term is manifestly a Lorentz scalar.
+Every Lorentz index is contracted: $\partial_\mu\Phi^\dagger\partial^\mu\Phi$
+contracts two vector indices via $\eta^{\mu\nu}$; $G_{\mu\nu}^a G^{\mu\nu\,a}$
+contracts two antisymmetric tensor pairs; and $W_\mu^a W^{\mu\,a}$ contracts
+one pair. Since $\Phi$ is a scalar and $W_\mu^a$ a vector, each term is a
+Lorentz scalar.
 
 \textbf{SU(2) invariance.}
-$\Phi^\dagger\Phi$ is invariant under $\Phi \to U\Phi$ by unitarity. The
-adjoint index $a$ is contracted with $\delta^{ab}$, which is invariant
-under $W^a \to R^{ab}W^b$ by orthogonality of the adjoint rotation $R$.
+$\Phi^\dagger\Phi$ is invariant under $\Phi \to U\Phi$ by unitarity.
+All adjoint indices $a$ are contracted with $\delta^{ab}$, preserved under
+$W^a \to R^{ab}W^b$ by orthogonality of $R$.
 
 \subsection*{Implementation and results}
 \mbox{}\\
-The equivariant networks from Section~3 output $W^{\mu}_a$ with an upper
-Lorentz index. We lower with the metric,
-$W_\nu^a = \eta_{\nu\mu}\,W^{\mu}_a$, before forming $G_{\mu\nu}^a$.
-All spacetime derivatives are computed exactly via PyTorch autograd. To
-ensure well-defined higher-order derivatives we retrain the equivariant
-networks from Section~3 with SiLU activations in place of ReLU,
-achieving comparable emulation quality
+The equivariant networks output $W^{\mu}_a$ with an upper Lorentz index;
+we lower with $W_\nu^a = \eta_{\nu\mu}\,W^{\mu}_a$ before forming
+$G_{\mu\nu}^a$. All derivatives are computed exactly via PyTorch autograd.
+To ensure well-defined second derivatives we retrain with SiLU activations
+in place of ReLU, achieving comparable emulation quality
 (Figure~\ref{fig:q4_training}). We set $m_\Phi = m_W = 1$.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{../figures/q4_training.png}
+    \includegraphics[width=0.8\textwidth]{../figures/thy_q4_training.png}
     \caption{Training curves for SiLU equivariant networks.}
     \label{fig:q4_training}
 \end{figure}
@@ -349,19 +393,21 @@ errors are $1.7 \times 10^{-7}$ and $2.7 \times 10^{-7}$ respectively,
 confirming that the Lagrangian is a Lorentz scalar to machine precision.
 
 \textbf{SU(2) invariance (numerical).}
-Since SU(2) is a global internal symmetry, we verify that the individual
-invariant combinations entering $\mathcal{L}$ are preserved under
-transformation. Under random $U \in \mathrm{SU}(2)$, the maximum
-deviations in $\Phi^\dagger\Phi$ and $W_\mu^a\,W^{\mu\,a}$ are
-$4.1 \times 10^{-8}$ and $2.5 \times 10^{-7}$ respectively, consistent 
-with float32 precision. This is expected since the Lagrangian depends on 
-the fields only through $\Phi^\dagger\Phi$ (unitary invariant) and 
-$\delta_{ab}$ contractions (adjoint invariant), so SU(2) invariance holds 
-as a mathematical identity.
+Under random $U \in \mathrm{SU}(2)$, the maximum deviations in
+$\Phi^\dagger\Phi$ and $W_\mu^a\,W^{\mu\,a}$ are
+$4.7 \times 10^{-8}$ and $2.3 \times 10^{-7}$ respectively, consistent
+with float32 precision. This follows because the Lagrangian depends on
+the fields only through unitarily invariant ($\Phi^\dagger\Phi$) and
+orthogonally invariant ($\delta_{ab}$) contractions.
+
+\section*{Use of generative AI}
+Claude (Anthropic) was used to assist with code development and
+report writing. All outputs were reviewed and tested by the author,
+who takes full responsibility for the final submission.
 
 % \begin{thebibliography}{99}
 
 % \bibitem{1} ***
 
 % \end{thebibliography}
-\end{document} 
+\end{document}
